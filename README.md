@@ -76,22 +76,10 @@ chmod +x get-session.sh
 VK_SESSION_FILE="$HOME/Desktop/vk-session.json" ./get-session.sh
 ```
 
-## Шаг 2. Отправить код в GitHub
-
-Если работаешь с изменениями локально, обычный цикл такой:
-
-```bash
-git add .
-git commit -m "update project"
-git push
-```
-
-Важно:
-
 - `vk-session.json` в git не идёт
 - файл уже добавлен в `.gitignore`
 
-## Шаг 3. Подтянуть проект на Ubuntu через git
+## Шаг 2. Подтянуть проект на Ubuntu через git
 
 ### Первый запуск на Ubuntu Server 22.04
 
@@ -109,7 +97,7 @@ cd VKOnline
 git pull
 ```
 
-## Шаг 4. Передать сессию на Ubuntu отдельно
+## Шаг 3. Передать сессию на Ubuntu отдельно
 
 Сессия передаётся не через git, а отдельно:
 
@@ -123,7 +111,7 @@ scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
 scp vk-session.json user@YOUR_SERVER:/home/user/secrets/vk-session.json
 ```
 
-## Шаг 5. Запустить проверку постов на Ubuntu
+## Шаг 4. Запустить проверку постов на Ubuntu
 
 Если `vk-session.json` лежит в корне проекта:
 
@@ -141,7 +129,7 @@ cd /home/user/VKOnline
 VK_SESSION_FILE=/home/user/secrets/vk-session.json ./start.sh durov java 10
 ```
 
-## Шаг 6. Запустить “вечный онлайн”
+## Шаг 5. Запустить “вечный онлайн”
 
 Если хочешь держать аккаунт активным через ту же сессию:
 
