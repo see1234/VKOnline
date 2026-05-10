@@ -1,40 +1,34 @@
-# VK Session Parser
+# Ubuntu Quick Start
 
-## 1. Get the session on your computer
-
-Run this on a computer with a normal desktop and browser:
+## 1. Забрать проект через git
 
 ```bash
-chmod +x get-session.sh
-./get-session.sh
+git clone https://github.com/see1234/VKOnline.git
+cd VKOnline
 ```
 
-It will open Chromium. Log in to VK, return to the terminal, and press `Enter`.
-
-This creates:
-
-```bash
-vk-session.json
-```
-
-## 2. Copy the session to Ubuntu Server 22.04
-
-```bash
-scp vk-session.json user@YOUR_SERVER:/home/user/SpringMonolit/
-```
-
-## 3. Prepare Ubuntu Server 22.04
-
-Run on the server:
+## 2. Поставить зависимости
 
 ```bash
 chmod +x ubuntu-setup.sh start.sh
 ./ubuntu-setup.sh
 ```
 
-## 4. Start checking posts
+## 3. Передать `vk-session.json` с macOS
 
-Examples:
+На `macOS` сначала получи сессию:
+
+```bash
+./get-session.sh
+```
+
+Потом скопируй её на сервер:
+
+```bash
+scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
+```
+
+## 4. Запустить проверку постов
 
 ```bash
 ./start.sh durov
@@ -42,25 +36,29 @@ Examples:
 ./start.sh wall-1 news 20
 ```
 
-Arguments:
+## 5. Обновлять код через git
 
-- `durov` or `wall-1`: page to open
-- `java` or `news`: optional text filter
-- `10` or `20`: how many posts to inspect
+Когда в GitHub появятся новые коммиты:
 
-## 5. Use a custom session path if needed
+```bash
+cd /home/user/VKOnline
+git pull
+```
+
+## 6. Если сессия лежит отдельно
 
 ```bash
 VK_SESSION_FILE=/home/user/secrets/vk-session.json ./start.sh durov java 10
 ```
 
-## Quick flow
+## Поток
 
 ```mermaid
 flowchart LR
-    A["PC with desktop"] --> B["./get-session.sh"]
-    B --> C["vk-session.json"]
-    C --> D["scp to Ubuntu"]
-    D --> E["./ubuntu-setup.sh"]
-    E --> F["./start.sh durov java 10"]
+    A["macOS: ./get-session.sh"] --> B["vk-session.json"]
+    C["GitHub: git push"] --> D["Ubuntu: git clone / git pull"]
+    B --> E["scp vk-session.json to Ubuntu"]
+    D --> F["./ubuntu-setup.sh"]
+    E --> G["./start.sh durov java 10"]
+    F --> G
 ```

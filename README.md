@@ -2,23 +2,35 @@
 
 Проверка постов VK через обычную браузерную сессию, без `access_token`.
 
-Проект работает так:
+Нормальный сценарий работы такой:
 
-- на `macOS` ты один раз логинишься в VK через браузер
-- проект сохраняет сессию в файл `vk-session.json`
-- этот файл переносится на `Ubuntu Server 22.04`
-- сервер запускает headless-проверку постов через ту же сессию
+- на `macOS` ты получаешь `vk-session.json`
+- проект хранится в GitHub
+- на `Ubuntu Server 22.04` сервер подтягивает код через `git clone` или `git pull`
+- сессия `vk-session.json` копируется на сервер отдельно
+- сервер запускает headless-проверку постов
 
-## Как это устроено
+## Схема
 
 ```mermaid
 flowchart LR
     A["macOS"] --> B["./get-session.sh"]
-    B --> C["Логин в VK через Chromium"]
-    C --> D["vk-session.json"]
-    D --> E["scp на Ubuntu Server"]
-    E --> F["./ubuntu-setup.sh"]
-    F --> G["./start.sh durov java 10"]
+    B --> C["vk-session.json"]
+    A --> D["git push"]
+    D --> E["GitHub repository"]
+    E --> F["Ubuntu: git clone or git pull"]
+    C --> G["scp vk-session.json to Ubuntu"]
+    F --> H["./ubuntu-setup.sh"]
+    G --> I["./start.sh durov java 10"]
+    H --> I
+```
+
+## Репозиторий
+
+GitHub-репозиторий проекта:
+
+```bash
+https://github.com/see1234/VKOnline.git
 ```
 
 ## Что лежит в проекте
@@ -31,8 +43,8 @@ flowchart LR
 ## Требования на macOS
 
 - установлен `Java`
-- есть доступ к браузеру и графическому интерфейсу
-- проект открыт локально
+- есть браузер и GUI
+- проект склонирован локально
 
 Проверка Java:
 
@@ -55,13 +67,7 @@ chmod +x get-session.sh
 2. откроется Chromium через Playwright
 3. ты вручную войдёшь в VK
 4. вернёшься в терминал и нажмёшь `Enter`
-5. рядом с проектом появится файл `vk-session.json`
-
-Итог:
-
-```bash
-vk-session.json
-```
+5. появится файл `vk-session.json`
 
 Если хочешь сохранить файл в другое место:
 
@@ -69,55 +75,79 @@ vk-session.json
 VK_SESSION_FILE="$HOME/Desktop/vk-session.json" ./get-session.sh
 ```
 
-## Шаг 2. Перенести сессию на Ubuntu Server
+## Шаг 2. Отправить код в GitHub
 
-Пример копирования:
+Если работаешь с изменениями локально, обычный цикл такой:
 
 ```bash
-scp vk-session.json user@YOUR_SERVER:/home/user/SpringMonolit/
+git add .
+git commit -m "update project"
+git push
 ```
 
-Если положил файл не в корень проекта, это тоже нормально. Тогда потом просто укажешь путь через `VK_SESSION_FILE`.
+Важно:
 
-## Шаг 3. Подготовить Ubuntu Server 22.04
+- `vk-session.json` в git не идёт
+- файл уже добавлен в `.gitignore`
 
-На сервере:
+## Шаг 3. Подтянуть проект на Ubuntu через git
+
+### Первый запуск на Ubuntu Server 22.04
 
 ```bash
-cd /home/user/SpringMonolit
+git clone https://github.com/see1234/VKOnline.git
+cd VKOnline
 chmod +x ubuntu-setup.sh start.sh
 ./ubuntu-setup.sh
 ```
 
-Скрипт:
-
-- поставит `OpenJDK 21`
-- поставит системные библиотеки для Playwright/Chromium
-- прогреет Gradle и скомпилирует проект
-
-## Шаг 4. Запустить проверку постов на сервере
-
-Примеры:
+### Следующие обновления на Ubuntu
 
 ```bash
+cd VKOnline
+git pull
+```
+
+## Шаг 4. Передать сессию на Ubuntu отдельно
+
+Сессия передаётся не через git, а отдельно:
+
+```bash
+scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
+```
+
+Если хочешь хранить её не в корне проекта:
+
+```bash
+scp vk-session.json user@YOUR_SERVER:/home/user/secrets/vk-session.json
+```
+
+## Шаг 5. Запустить проверку постов на Ubuntu
+
+Если `vk-session.json` лежит в корне проекта:
+
+```bash
+cd /home/user/VKOnline
 ./start.sh durov
 ./start.sh durov java 10
 ./start.sh wall-1 news 20
 ```
 
-Где:
-
-- `durov` или `wall-1` — страница/стена
-- `java` или `news` — необязательный фильтр по тексту
-- `10` или `20` — сколько постов проверять
-
-## Запуск с другим путём к сессии
-
-Если `vk-session.json` лежит не в корне проекта:
+Если `vk-session.json` лежит отдельно:
 
 ```bash
+cd /home/user/VKOnline
 VK_SESSION_FILE=/home/user/secrets/vk-session.json ./start.sh durov java 10
 ```
+
+## Что делает `ubuntu-setup.sh`
+
+Скрипт:
+
+- ставит `OpenJDK 21`
+- ставит системные библиотеки для Playwright/Chromium
+- прогревает Gradle
+- компилирует проект
 
 ## Самый короткий сценарий
 
@@ -125,13 +155,26 @@ VK_SESSION_FILE=/home/user/secrets/vk-session.json ./start.sh durov java 10
 
 ```bash
 ./get-session.sh
-scp vk-session.json user@YOUR_SERVER:/home/user/SpringMonolit/
+git add .
+git commit -m "update project"
+git push
+scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
 ```
 
 ### На Ubuntu
 
 ```bash
+git clone https://github.com/see1234/VKOnline.git
+cd VKOnline
 ./ubuntu-setup.sh
+./start.sh durov java 10
+```
+
+### Обновление Ubuntu после новых коммитов
+
+```bash
+cd /home/user/VKOnline
+git pull
 ./start.sh durov java 10
 ```
 
@@ -139,23 +182,22 @@ scp vk-session.json user@YOUR_SERVER:/home/user/SpringMonolit/
 
 Если VK разлогинит сессию:
 
-1. снова запускаешь на `macOS`:
+1. на `macOS` снова запускаешь:
 
 ```bash
 ./get-session.sh
 ```
 
-2. заново копируешь новый `vk-session.json` на сервер
-3. снова запускаешь `./start.sh ...`
+2. заново копируешь `vk-session.json` на сервер
+3. код через git трогать не нужно, если менялась только сессия
 
 ## Важные замечания
 
 - `vk-session.json` содержит данные браузерной сессии, не коммить его в git и не отправляй посторонним
-- файл уже добавлен в `.gitignore`
-- текущая логика читает страницу VK через DOM, поэтому если VK сильно поменяет верстку, парсер может потребовать правки
 - для сервера не нужен GUI, потому что проверка идёт в headless-режиме
+- текущая логика читает страницу VK через DOM, поэтому если VK поменяет верстку, парсер может потребовать правки
 
-## Команды проекта
+## Основные команды
 
 Получить сессию:
 
@@ -174,10 +216,9 @@ scp vk-session.json user@YOUR_SERVER:/home/user/SpringMonolit/
 ```bash
 ./start.sh <vk_owner> [query] [count]
 ```
-# VKOnline
-# VKOnline
-# VKOnline
-# VKOnline
-# VKOnline
-# VKOnline
-# VKOnline
+
+Обновить код на Ubuntu:
+
+```bash
+git pull
+```
