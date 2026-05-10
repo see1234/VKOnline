@@ -36,7 +36,23 @@ scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
 ./start.sh wall-1 news 20
 ```
 
-## 5. Обновлять код через git
+## 5. Запустить “вечный онлайн”
+
+```bash
+chmod +x online.sh
+./online.sh
+```
+
+Примеры:
+
+```bash
+./online.sh 240 feed
+./online.sh 300 im
+```
+
+Это best-effort keepalive через браузерную сессию VK.
+
+## 6. Обновлять код через git
 
 Когда в GitHub появятся новые коммиты:
 

@@ -37,6 +37,7 @@ https://github.com/see1234/VKOnline.git
 
 - [get-session.sh](/Users/see1/IdeaProjects/SpringMonolit/get-session.sh) — получить `vk-session.json` на `macOS`
 - [start.sh](/Users/see1/IdeaProjects/SpringMonolit/start.sh) — запуск проверки постов
+- [online.sh](/Users/see1/IdeaProjects/SpringMonolit/online.sh) — best-effort режим “вечного онлайна”
 - [ubuntu-setup.sh](/Users/see1/IdeaProjects/SpringMonolit/ubuntu-setup.sh) — установка зависимостей на `Ubuntu Server 22.04`
 - [README-UBUNTU.md](/Users/see1/IdeaProjects/SpringMonolit/README-UBUNTU.md) — короткая Ubuntu-выжимка
 
@@ -140,6 +141,33 @@ cd /home/user/VKOnline
 VK_SESSION_FILE=/home/user/secrets/vk-session.json ./start.sh durov java 10
 ```
 
+## Шаг 6. Запустить “вечный онлайн”
+
+Если хочешь держать аккаунт активным через ту же сессию:
+
+```bash
+cd /home/user/VKOnline
+./online.sh
+```
+
+Свой интервал и цель:
+
+```bash
+./online.sh 240 feed
+./online.sh 300 im
+```
+
+Где:
+
+- `240` или `300` — интервал heartbeat в секундах
+- `feed` или `im` — страница VK, на которой будет держаться активность
+
+Важно:
+
+- это `best-effort`, а не гарантированный “навсегда online”
+- если VK разлогинит сессию, heartbeat остановится с ошибкой
+- чем меньше интервал, тем выше нагрузка и тем заметнее автоматизация
+
 ## Что делает `ubuntu-setup.sh`
 
 Скрипт:
@@ -167,6 +195,7 @@ scp vk-session.json user@YOUR_SERVER:/home/user/VKOnline/
 git clone https://github.com/see1234/VKOnline.git
 cd VKOnline
 ./ubuntu-setup.sh
+./online.sh 240 feed
 ./start.sh durov java 10
 ```
 
@@ -196,6 +225,7 @@ git pull
 - `vk-session.json` содержит данные браузерной сессии, не коммить его в git и не отправляй посторонним
 - для сервера не нужен GUI, потому что проверка идёт в headless-режиме
 - текущая логика читает страницу VK через DOM, поэтому если VK поменяет верстку, парсер может потребовать правки
+- `online.sh` не даёт 100% гарантии статуса online, а только регулярно поддерживает активность через браузерную сессию
 
 ## Основные команды
 
@@ -215,6 +245,12 @@ git pull
 
 ```bash
 ./start.sh <vk_owner> [query] [count]
+```
+
+Запустить keepalive:
+
+```bash
+./online.sh [interval_seconds] [target]
 ```
 
 Обновить код на Ubuntu:

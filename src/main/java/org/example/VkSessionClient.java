@@ -11,11 +11,14 @@ import com.microsoft.playwright.options.WaitUntilState;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class VkSessionClient {
+    private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final Path sessionFile;
 
     public VkSessionClient(Path sessionFile) {
@@ -79,6 +82,44 @@ public class VkSessionClient {
         }
     }
 
+    public void runOnlineHeartbeat(int intervalSeconds, String target) throws IOException, InterruptedException {
+        if (!Files.exists(sessionFile)) {
+            throw new IllegalArgumentException("Session file is missing. Run session-login first.");
+        }
+
+        String normalizedTarget = target == null ? "feed" : target;
+        String targetUrl = buildKeepAliveUrl(normalizedTarget);
+
+        try (Playwright playwright = Playwright.create()) {
+            try (Browser browser = playwright.chromium().launch(
+                    new BrowserType.LaunchOptions().setHeadless(true)
+            ); BrowserContext context = browser.newContext(
+                    new Browser.NewContextOptions().setStorageStatePath(sessionFile)
+            )) {
+                Page page = getOrCreatePage(context);
+                page.navigate(targetUrl, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+                page.waitForTimeout(2_000);
+
+                if (looksUnauthenticated(page)) {
+                    throw new IllegalArgumentException("VK session is missing or expired. Run session-login again.");
+                }
+
+                System.out.println(logPrefix() + " online-heartbeat started");
+                System.out.println(logPrefix() + " target: " + targetUrl);
+                System.out.println(logPrefix() + " interval seconds: " + intervalSeconds);
+                System.out.println(logPrefix() + " stop with Ctrl+C");
+
+                int cycle = 1;
+                while (true) {
+                    performHeartbeat(page, targetUrl, cycle);
+                    System.out.println(logPrefix() + " heartbeat cycle " + cycle + " completed");
+                    cycle++;
+                    Thread.sleep(intervalSeconds * 1_000L);
+                }
+            }
+        }
+    }
+
     private List<WallPost> collectPosts(Page page, int count) {
         List<WallPost> posts = new ArrayList<>();
 
@@ -96,6 +137,39 @@ public class VkSessionClient {
             return posts.subList(0, count);
         }
         return posts;
+    }
+
+    private void performHeartbeat(Page page, String targetUrl, int cycle) {
+        if (cycle % 5 == 1 && !page.url().startsWith(targetUrl)) {
+            page.navigate(targetUrl, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+            page.waitForTimeout(1_500);
+        } else {
+            page.reload(new Page.ReloadOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+            page.waitForTimeout(1_500);
+        }
+
+        if (looksUnauthenticated(page)) {
+            throw new IllegalArgumentException("VK session expired during online-heartbeat. Run session-login again.");
+        }
+
+        page.mouse().move(200, 220);
+        page.mouse().wheel(0, 700);
+        page.waitForTimeout(1_000);
+        page.mouse().move(320, 460);
+        page.mouse().wheel(0, -450);
+        page.waitForTimeout(1_000);
+
+        page.evaluate(
+                """
+                () => {
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });
+                  document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 320, clientY: 400 }));
+                  document.dispatchEvent(new Event("visibilitychange"));
+                  window.scrollTo({ top: 0, behavior: "instant" });
+                }
+                """
+        );
+        page.waitForTimeout(1_000);
     }
 
     @SuppressWarnings("unchecked")
@@ -172,10 +246,24 @@ public class VkSessionClient {
         return "https://vk.com/" + owner;
     }
 
+    private String buildKeepAliveUrl(String target) {
+        if (target.startsWith("http://") || target.startsWith("https://")) {
+            return target;
+        }
+        if (target.isBlank()) {
+            return "https://vk.com/feed";
+        }
+        return "https://vk.com/" + target;
+    }
+
     private Page getOrCreatePage(BrowserContext context) {
         if (context.pages().isEmpty()) {
             return context.newPage();
         }
         return context.pages().get(0);
+    }
+
+    private String logPrefix() {
+        return "[" + LOG_TIME_FORMATTER.format(LocalDateTime.now()) + "]";
     }
 }

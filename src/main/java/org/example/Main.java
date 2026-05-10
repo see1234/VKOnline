@@ -17,6 +17,7 @@ public class Main {
                     List<WallPost> posts = sessionClient.readWall(command.owner(), command.query(), command.count());
                     ConsolePrinter.printPosts(posts, command.query());
                 }
+                case ONLINE_HEARTBEAT -> sessionClient.runOnlineHeartbeat(command.intervalSeconds(), command.owner());
             }
         } catch (IllegalArgumentException e) {
             printUsage(e.getMessage());
@@ -29,15 +30,18 @@ public class Main {
         System.err.println("Usage:");
         System.err.println("  ./gradlew run --args=\"session-login\"");
         System.err.println("  ./gradlew run --args=\"session-check <domain-or-wall-path> [query] [count]\"");
+        System.err.println("  ./gradlew run --args=\"online-heartbeat [intervalSeconds] [target]\"");
         System.err.println();
         System.err.println("Examples:");
         System.err.println("  ./gradlew run --args=\"session-login\"");
         System.err.println("  ./gradlew run --args=\"session-check durov java 10\"");
         System.err.println("  ./gradlew run --args=\"session-check wall-1 news 20\"");
+        System.err.println("  ./gradlew run --args=\"online-heartbeat 240 feed\"");
         System.err.println();
         System.err.println("Notes:");
         System.err.println("  - session-login opens Chromium and saves the VK session in vk-session.json.");
         System.err.println("  - session-check reuses the saved VK session file without VK token.");
+        System.err.println("  - online-heartbeat keeps a best-effort online presence using the saved VK session.");
         System.err.println("  - Optional env: VK_SESSION_FILE=/path/to/vk-session.json");
         System.err.println("  - If Playwright browsers are missing, run the install command from the final instructions.");
     }
